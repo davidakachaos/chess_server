@@ -2,4 +2,4 @@ databases:
     sqlite:
         driver: sqlite
         database: 'chess_server.db'
-        log_queries: True
+        log_queries: False
