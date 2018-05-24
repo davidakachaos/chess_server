@@ -58,6 +58,8 @@ class Responder(socketserver.BaseRequestHandler):
                 self._handle_opponent_name(text)
             elif text.startswith('queue_up'):
                 self._handle_queuing_up(text)
+            elif text.startswith('dequeue'):
+                self._handle_dequeue(text)
             elif text.startswith('move'):
                 self._handle_move_for_game(text)
             elif text.startswith('getboardstate'):
@@ -75,6 +77,13 @@ class Responder(socketserver.BaseRequestHandler):
             self.request.sendall('NOT LOGGED IN!'.encode("utf8"))
         finally:
             self.request.close()
+
+    def _handle_dequeue(self, text):
+        player = self._get_player(text)
+        if self.server.game_keeper.dequeue_player(player):
+            self.request.sendall("dequeued".encode("utf8"))
+        else:
+            self.request.sendall("player_not_in_queue".encode("utf8"))
 
     def _handle_getboardstate(self, text):
         player = self._get_player(text)
