@@ -8,11 +8,6 @@ from models.game import Game
 from models.player import Player
 from game_keeper import GameNotFound, IllegalMove, NotPlayersTurn
 
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(name)s: %(message)s',
-                    )
-
-
 class NotLoggedIn(Exception):
     """Raised when a used is not logged in for certain functions."""
 
@@ -27,6 +22,7 @@ class Responder(socketserver.BaseRequestHandler):
                                                  client_address,
                                                  server)
         self.game_keeper = server.game_keeper
+        self.last_log_line = ""
 
     def _get_player(self, text):
         guid = text.split("|")[-1]
@@ -88,11 +84,11 @@ class Responder(socketserver.BaseRequestHandler):
     def _handle_getboardstate(self, text):
         player = self._get_player(text)
         gguid = text.split("|")[1]
-        state = self.server.game_keeper.check_game_state(gguid)
+        state = self.server.game_keeper.get_game_state(gguid)
         self.request.sendall(pickle.dumps(state))
 
     def _handle_get_board(self, text):
-        player = self._get_player(text)
+        self._get_player(text)
         gguid = text.split("|")[1]
         board = self.server.game_keeper.get_board(gguid)
         self.request.sendall(pickle.dumps(board))

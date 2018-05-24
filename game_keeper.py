@@ -6,10 +6,6 @@ from models.game import Game
 from models.player import Player
 from time import sleep
 
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(name)s: %(message)s',
-                    )
-
 
 class GameNotFound(Exception):
     """Raise when game not found."""
@@ -35,9 +31,23 @@ class GameKeeper():
         self._games_to_start = {}
 
     def player_in_queue(self, player):
-        return player in self._current_player_queue
+        """Check if a player is in the current queue for a new game."""
+        return player.id in self._current_player_queue
 
     def dequeue_player(self, player):
+        """
+        Remove a player from the current queue for new games.
+
+        This will remove a player from the current queue. It will return
+        True if the player was in the queue and False if (s)he wasn'tself.
+
+        Args:
+            player (Player): The player to remove from the queue.
+
+        Returns:
+            boolean: True if the player was in the queue. False if (s)he wasn't
+
+        """
         was_in_q = player.id in self._current_player_queue
         self.remove_player(player)
         if was_in_q:
@@ -72,7 +82,6 @@ class GameKeeper():
         This will be called once in a while to check the queue. When there are
         enough players in the queue (2 or more) we start making new games.
         """
-
         self.logger.info("Checking game queue.")
         self.logger.debug(f"Current players in queue: {len(self._current_player_queue)}")
         while len(self._current_player_queue) > 1:
@@ -112,6 +121,23 @@ class GameKeeper():
         return Game.where('guid', guid).first()
 
     def make_move(self, guid, player, move):
+        """Make a [move] for a [player] in a chess game.
+
+        Parameters
+        ----------
+        guid : String
+            The id of a game.
+        player : Player
+            A chess player in that game.
+        move : String
+            A uci representation of a move to make in the chess game.
+
+        Returns
+        -------
+        Void
+            Nothing if all wend okay, else raises an exception.
+
+        """
         self.logger.debug(f"Recieved move for game {guid}")
         game = self._lookup_game(guid)
         if game is None:
@@ -132,7 +158,20 @@ class GameKeeper():
         else:
             raise NotPlayersTurn(f"It is not the turn for player {player.id} in game {guid}")
 
-    def check_game_state(self, guid):
+    def get_game_state(self, guid):
+        """Return the state of a game.
+
+        Parameters
+        ----------
+        guid : String
+            The unique identifier of a game.
+
+        Returns
+        -------
+        Hash
+            A hash with the state of a game.
+
+        """
         game = self._lookup_game(guid)
         if not game:
             return {}
@@ -166,12 +205,33 @@ class GameKeeper():
         return game_state
 
     def get_board(self, guid):
+        """Return a board object for a game.
+
+        Parameters
+        ----------
+        guid : String
+            An unique identifier for a chess game.
+
+        Returns
+        -------
+        chess.Board
+            The current board for a chess game.
+
+        """
         game = self._lookup_game(guid)
         if not game:
             return None
         return game.board
 
     def check_current_games(self):
+        """Check all current games for events.
+
+        Returns
+        -------
+        None
+            Returns nothing.
+
+        """
         for game in self._current_games:
             if not game.state == 'in_progress':
                 self.logger.debug(f"Checking game {game.id} | {game.state}")
@@ -179,16 +239,41 @@ class GameKeeper():
                 self._current_games.discard(game)
 
     def current_game_count(self):
+        """Return the count of current games.
+
+        Returns
+        -------
+        Integer
+            The amount of currently running games.
+
+        """
         self.check_current_games()
         return len(self._current_games)
 
     def load_games(self):
+        """Load all games from database to the current games array."""
         self.logger.debug("Loading games...")
         for game in Game.where('state', 'in_progress').get():
             self._current_games.add(game)
 
     def add_player(self, player):
+        """Add player to the waiting queue.
+
+        Parameters
+        ----------
+        player : Player
+            The player to add to the waiting queue.
+
+        """
         self._current_player_queue.add(player.id)
 
     def remove_player(self, player):
+        """Remove a player from the waiting queue.
+
+        Parameters
+        ----------
+        player : Player
+            The player to remove from the waiting queue.
+
+        """
         self._current_player_queue.discard(player.id)

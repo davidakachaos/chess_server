@@ -8,7 +8,7 @@ from responder import Responder
 from time_lord import TimeLord
 
 logging.basicConfig(level=logging.DEBUG,
-                    format='%(name)s: %(message)s',
+                    format='%(relativeCreated)6d %(threadName)s %(name)-12s %(levelname)-8s %(message)s',
                     )
 
 # Multithreaded Python server : TCP Server Socket Program Stub
@@ -23,6 +23,9 @@ class ChessServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     allow_reuse_address = True
 
     def __init__(self, server_address, RequestHandlerClass, game_keeper):
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(relativeCreated)6d %(threadName)s %(name)-12s %(levelname)-8s %(message)s',
+                            )
         self.logger = logging.getLogger('ChessServer')
         self.logger.debug('__init__')
         self.game_keeper = game_keeper
