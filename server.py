@@ -39,6 +39,10 @@ class ChessServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 
 if __name__ == "__main__":
+    # Set level to error logging for orator
+    logging.getLogger('orator.connection.queries').setLevel(logging.ERROR)
+    logging.getLogger('orator.database_manager').setLevel(logging.ERROR)
+
     GAME_KEEPER = GameKeeper()
     GAME_KEEPER.load_games()
     TIME_LORD = TimeLord()
