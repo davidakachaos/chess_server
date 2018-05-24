@@ -82,8 +82,6 @@ class GameKeeper():
         This will be called once in a while to check the queue. When there are
         enough players in the queue (2 or more) we start making new games.
         """
-        self.logger.info("Checking game queue.")
-        self.logger.debug(f"Current players in queue: {len(self._current_player_queue)}")
         while len(self._current_player_queue) > 1:
             self.logger.debug('Creating game for clients.')
             player1 = Player.find(random.choice(list(self._current_player_queue)))
