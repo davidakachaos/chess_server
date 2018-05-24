@@ -34,6 +34,17 @@ class GameKeeper():
         self._current_player_queue = set()
         self._games_to_start = {}
 
+    def player_in_queue(self, player):
+        return player in self._current_player_queue
+
+    def dequeue_player(self, player):
+        was_in_q = player.id in self._current_player_queue
+        self.remove_player(player)
+        if was_in_q:
+            return True
+        else:
+            return False
+
     def new_game(self, player, opponent=None):
         """Start a new game between players."""
         game = None
@@ -63,8 +74,8 @@ class GameKeeper():
         """
 
         self.logger.info("Checking game queue.")
+        self.logger.debug(f"Current players in queue: {len(self._current_player_queue)}")
         while len(self._current_player_queue) > 1:
-            self.logger.debug(f"Current players in queue: {len(self._current_player_queue)}")
             self.logger.debug('Creating game for clients.')
             player1 = Player.find(random.choice(list(self._current_player_queue)))
             # Prevent player vs self
