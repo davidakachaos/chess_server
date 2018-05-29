@@ -33,42 +33,28 @@ class Responder(socketserver.BaseRequestHandler):
         return p
 
     def handle(self):
-        # self.logger.debug('handle')
-        # Misschien moet dit omhoog of ander, maar voor nu volstaat dit.
-        data = self.request.recv(4096)
-
-        text = data.decode('utf-8')
-        self.logger.debug(f"Raw command: {text}")
         try:
-            if text.startswith('login'):
-                self._handle_login(text)
-            elif text.startswith('register'):
-                self._handle_register(text)
-            elif text.startswith('current_games'):
-                self._handle_current_games(text)
-            elif text.startswith('myturn'):
-                self._handle_my_turn(text)
-            elif text.startswith('myside'):
-                self._handle_my_side(text)
-            elif text.startswith('opponent_name'):
-                self._handle_opponent_name(text)
-            elif text.startswith('queue_up'):
-                self._handle_queuing_up(text)
-            elif text.startswith('dequeue'):
-                self._handle_dequeue(text)
-            elif text.startswith('move'):
-                self._handle_move_for_game(text)
-            elif text.startswith('getboardstate'):
-                self._handle_getboardstate(text)
-            elif text.startswith('getboard'):
-                self._handle_get_board(text)
-            elif text.startswith('current_game_count'):
-                self.request.sendall(
-                    str(self.server.game_keeper.current_game_count()).encode("utf8"))
-            else:
-                self.logger.debug("Unknown command!")
-                self.request.sendall('invalid'.encode("utf8"))
-                # self.request.close()
+            # Misschien moet dit omhoog of ander, maar voor nu volstaat dit.
+            data = self.request.recv(4096)
+            text = data.decode('utf-8')
+            self.logger.debug(f"Raw command: {text}")
+        except ConnectionResetError as e:
+            self.logger.error("Client disconnected before sending command!")
+            return
+
+        # def invalid_command(self):
+        #     self.logger.debug("Unknown command!")
+        #     self.request.sendall('invalid'.encode("utf8"))
+        if len(text) < 1:
+            self.logger.debug("Unknown command!")
+            self.request.sendall('invalid'.encode("utf8"))
+            self.request.close()
+            return
+        try:
+            cmd = text.split("|")[0]
+            method_name = f"_handle_{cmd}"
+            method = getattr(self, method_name)
+            return method(text)
         except NotLoggedIn as e:
             self.request.sendall('NOT LOGGED IN!'.encode("utf8"))
         finally:
@@ -87,13 +73,13 @@ class Responder(socketserver.BaseRequestHandler):
         state = self.server.game_keeper.get_game_state(gguid)
         self.request.sendall(pickle.dumps(state))
 
-    def _handle_get_board(self, text):
+    def _handle_getboard(self, text):
         self._get_player(text)
         gguid = text.split("|")[1]
         board = self.server.game_keeper.get_board(gguid)
         self.request.sendall(pickle.dumps(board))
 
-    def _handle_move_for_game(self, text):
+    def _handle_move(self, text):
         # text == move|{gameguid}|{move}|{playerguid}
         _, gguid, move, pguid = text.split('|')
         player = self._get_player(text)
@@ -119,7 +105,7 @@ class Responder(socketserver.BaseRequestHandler):
         guids = [g.guid for g in games]
         self.request.sendall("|".join(guids).encode("utf8"))
 
-    def _handle_my_turn(self, text):
+    def _handle_myturn(self, text):
         _, gguid, pguid = text.split('|')
         player = self._get_player(text)
         game = Game.where('guid', gguid).first()
@@ -128,7 +114,7 @@ class Responder(socketserver.BaseRequestHandler):
         else:
             self.request.sendall("False".encode("utf8"))
 
-    def _handle_my_side(self, text):
+    def _handle_myside(self, text):
         _, gguid, pguid = text.split('|')
         player = self._get_player(text)
         game = Game.where('guid', gguid).first()
@@ -146,7 +132,7 @@ class Responder(socketserver.BaseRequestHandler):
         else:
             self.request.sendall(f"{game.black_player.name}".encode("utf8"))
 
-    def _handle_queuing_up(self, text):
+    def _handle_queue_up(self, text):
         self.logger.debug("Client requesting a random game.")
         p = self._get_player(text)
         game = self.server.game_keeper.new_game(p)
