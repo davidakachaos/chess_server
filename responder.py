@@ -33,8 +33,13 @@ class Responder(socketserver.BaseRequestHandler):
         return p
 
     def handle(self):
+        """Handle incomming commands.
+
+        Returns
+        -------
+        reponse to client.
+        """
         try:
-            # Misschien moet dit omhoog of ander, maar voor nu volstaat dit.
             data = self.request.recv(4096)
             text = data.decode('utf-8')
             self.logger.debug(f"Raw command: {text}")
@@ -42,9 +47,6 @@ class Responder(socketserver.BaseRequestHandler):
             self.logger.error("Client disconnected before sending command!")
             return
 
-        # def invalid_command(self):
-        #     self.logger.debug("Unknown command!")
-        #     self.request.sendall('invalid'.encode("utf8"))
         if len(text) < 1:
             self.logger.debug("Unknown command!")
             self.request.sendall('invalid'.encode("utf8"))
@@ -54,11 +56,15 @@ class Responder(socketserver.BaseRequestHandler):
             cmd = text.split("|")[0]
             method_name = f"_handle_{cmd}"
             method = getattr(self, method_name)
+            # self.logger.debug(f"exec: {method_name}")
             return method(text)
         except NotLoggedIn as e:
             self.request.sendall('NOT LOGGED IN!'.encode("utf8"))
-        finally:
+        except AttributeError as e:
+            self.logger.debug("Unknown command!")
+            self.request.sendall('invalid'.encode("utf8"))
             self.request.close()
+            return
 
     def _handle_dequeue(self, text):
         player = self._get_player(text)
@@ -76,7 +82,9 @@ class Responder(socketserver.BaseRequestHandler):
     def _handle_getboard(self, text):
         self._get_player(text)
         gguid = text.split("|")[1]
+        self.logger.info("Loading board for player")
         board = self.server.game_keeper.get_board(gguid)
+        self.logger.info(f"Board: {board}")
         self.request.sendall(pickle.dumps(board))
 
     def _handle_move(self, text):
