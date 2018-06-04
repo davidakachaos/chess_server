@@ -38,6 +38,7 @@ class Responder(socketserver.BaseRequestHandler):
         Returns
         -------
         reponse to client.
+
         """
         try:
             data = self.request.recv(4096)
@@ -110,6 +111,21 @@ class Responder(socketserver.BaseRequestHandler):
         p = self._get_player(text)
         games = p.games_as_white.all() + p.games_as_black.all()
         games = [g for g in games if g.state == 'in_progress']
+        guids = [g.guid for g in games]
+        self.request.sendall("|".join(guids).encode("utf8"))
+
+    def _handle_all_games(self, text):
+        self.logger.debug('Client wants a list of all games')
+        p = self._get_player(text)
+        games = p.games_as_white.all() + p.games_as_black.all()
+        guids = [g.guid for g in games]
+        self.request.sendall("|".join(guids).encode("utf8"))
+
+    def _handle_done_games(self, text):
+        self.logger.debug('Client wants a list of old games')
+        p = self._get_player(text)
+        games = p.games_as_white.all() + p.games_as_black.all()
+        games = [g for g in games if g.state != 'in_progress']
         guids = [g.guid for g in games]
         self.request.sendall("|".join(guids).encode("utf8"))
 
