@@ -26,7 +26,7 @@ class Responder(socketserver.BaseRequestHandler):
 
     def _get_player(self, text):
         guid = text.split("|")[-1]
-        self.logger.debug(f"Checking player guid {guid}")
+        # self.logger.debug(f"Checking player guid {guid}")
         p = Player.where('guid', guid).first()
         if p is None:
             raise NotLoggedIn("Not logged in!")
@@ -43,13 +43,11 @@ class Responder(socketserver.BaseRequestHandler):
         try:
             data = self.request.recv(4096)
             text = data.decode('utf-8')
-            self.logger.debug(f"Raw command: {text}")
         except ConnectionResetError as e:
             self.logger.error("Client disconnected before sending command!")
             return
 
         if len(text) < 1:
-            self.logger.debug("Unknown command!")
             self.request.sendall('invalid'.encode("utf8"))
             self.request.close()
             return
@@ -62,6 +60,7 @@ class Responder(socketserver.BaseRequestHandler):
         except NotLoggedIn as e:
             self.request.sendall('NOT LOGGED IN!'.encode("utf8"))
         except AttributeError as e:
+            self.logger.error(f"ERROR! Raw command: {text}")
             self.logger.debug("Unknown command!")
             self.request.sendall('invalid'.encode("utf8"))
             self.request.close()
@@ -83,9 +82,7 @@ class Responder(socketserver.BaseRequestHandler):
     def _handle_getboard(self, text):
         self._get_player(text)
         gguid = text.split("|")[1]
-        self.logger.info("Loading board for player")
         board = self.server.game_keeper.get_board(gguid)
-        self.logger.info(f"Board: {board}")
         self.request.sendall(pickle.dumps(board))
 
     def _handle_move(self, text):
@@ -107,7 +104,7 @@ class Responder(socketserver.BaseRequestHandler):
             self.request.close()
 
     def _handle_current_games(self, text):
-        self.logger.debug('Client wants a list of current_games')
+        # self.logger.debug('Client wants a list of current_games')
         p = self._get_player(text)
         games = p.games_as_white.all() + p.games_as_black.all()
         games = [g for g in games if g.state == 'in_progress']
@@ -115,14 +112,14 @@ class Responder(socketserver.BaseRequestHandler):
         self.request.sendall("|".join(guids).encode("utf8"))
 
     def _handle_all_games(self, text):
-        self.logger.debug('Client wants a list of all games')
+        # self.logger.debug('Client wants a list of all games')
         p = self._get_player(text)
         games = p.games_as_white.all() + p.games_as_black.all()
         guids = [g.guid for g in games]
         self.request.sendall("|".join(guids).encode("utf8"))
 
     def _handle_done_games(self, text):
-        self.logger.debug('Client wants a list of old games')
+        # self.logger.debug('Client wants a list of old games')
         p = self._get_player(text)
         games = p.games_as_white.all() + p.games_as_black.all()
         games = [g for g in games if g.state != 'in_progress']
@@ -163,7 +160,7 @@ class Responder(socketserver.BaseRequestHandler):
         if game is None:
             self.request.sendall('queued_for_game'.encode("utf8"))
         else:
-            self.request.sendall(f"new_game|{game.guid}".encode("utf8"))
+            self.request.sendall(f"{game.guid}".encode("utf8"))
 
     def _handle_login(self, text):
         self.logger.debug("Recieved login request.")

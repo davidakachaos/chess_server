@@ -136,7 +136,7 @@ class GameKeeper():
             Nothing if all wend okay, else raises an exception.
 
         """
-        self.logger.debug(f"Recieved move for game {guid}")
+        # self.logger.debug(f"Recieved move for game {guid}")
         game = self._lookup_game(guid)
         if game is None:
             self.logger.warn(f"No game with guid {guid} found!")
@@ -148,8 +148,6 @@ class GameKeeper():
             if chess_move in board.legal_moves:
                 board.push(chess_move)
                 game.save_board(board)
-                self.logger.info("Board:")
-                self.logger.info(board)
             else:
                 self.logger.info("Illegal move!")
                 raise IllegalMove(f"Illegal move {move}")
