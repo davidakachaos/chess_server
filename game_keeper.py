@@ -19,13 +19,13 @@ class NotPlayersTurn(Exception):
     """Raise when its not the players turn to move."""
 
 
-class GameKeeper():
+class GameKeeper:
     """A keeper of games between players."""
 
     def __init__(self):
         """Initialize a new GameKeeper."""
-        self.logger = logging.getLogger('GameKeeper')
-        self.logger.debug('__init__')
+        self.logger = logging.getLogger("GameKeeper")
+        self.logger.debug("__init__")
         self._current_games = set()
         self._current_player_queue = set()
         self._games_to_start = {}
@@ -83,16 +83,17 @@ class GameKeeper():
         enough players in the queue (2 or more) we start making new games.
         """
         while len(self._current_player_queue) > 1:
-            self.logger.debug('Creating game for clients.')
+            self.logger.debug("Creating game for clients.")
             player1 = Player.find(random.choice(list(self._current_player_queue)))
             # Prevent player vs self
-            available = [
-                p for p in self._current_player_queue if player1.id != p]
+            available = [p for p in self._current_player_queue if player1.id != p]
             player2 = Player.find(random.choice(available))
             game = self._setup_game(player1, player2)
             self._games_to_start[player1.id] = game.guid
             self._games_to_start[player2.id] = game.guid
-            self.logger.debug(f"Create another one? {len(self._current_player_queue) > 1}")
+            self.logger.debug(
+                f"Create another one? {len(self._current_player_queue) > 1}"
+            )
             sleep(1)
 
     def _setup_game(self, player, opponent):
@@ -116,7 +117,7 @@ class GameKeeper():
         return new_game
 
     def _lookup_game(self, guid):
-        return Game.where('guid', guid).first()
+        return Game.where("guid", guid).first()
 
     def make_move(self, guid, player, move):
         """Make a [move] for a [player] in a chess game.
@@ -152,7 +153,9 @@ class GameKeeper():
                 self.logger.info("Illegal move!")
                 raise IllegalMove(f"Illegal move {move}")
         else:
-            raise NotPlayersTurn(f"It is not the turn for player {player.id} in game {guid}")
+            raise NotPlayersTurn(
+                f"It is not the turn for player {player.id} in game {guid}"
+            )
 
     def get_game_state(self, guid):
         """Return the state of a game.
@@ -174,29 +177,31 @@ class GameKeeper():
 
         board = game.board
         game_state = {}
-        game_state['guid'] = guid
-        game_state['white_player'] = game.white_player.name
-        game_state['black_player'] = game.black_player.name
-        game_state['started'] = game.created_at.to_datetime_string()
-        game_state['last_move'] = game.updated_at.to_datetime_string()
-        game_state['fen'] = board.fen()
-        game_state['game_over'] = board.is_game_over()
-        game_state['checkmate'] = board.is_checkmate()
-        game_state['stalemate'] = board.is_stalemate()
-        game_state['insufficient_material'] = board.is_insufficient_material()
-        game_state['seventyfive_moves'] = board.is_seventyfive_moves()
-        game_state['fivefold_repetition'] = board.is_fivefold_repetition()
-        game_state['can_claim_draw'] = board.can_claim_draw()
-        game_state['can_claim_fifty_moves'] = board.can_claim_fifty_moves()
-        game_state['can_claim_threefold_repetition'] = board.can_claim_threefold_repetition()
-        game_state['result'] = None
+        game_state["guid"] = guid
+        game_state["white_player"] = game.white_player.name
+        game_state["black_player"] = game.black_player.name
+        game_state["started"] = game.created_at.to_datetime_string()
+        game_state["last_move"] = game.updated_at.to_datetime_string()
+        game_state["fen"] = board.fen()
+        game_state["game_over"] = board.is_game_over()
+        game_state["checkmate"] = board.is_checkmate()
+        game_state["stalemate"] = board.is_stalemate()
+        game_state["insufficient_material"] = board.is_insufficient_material()
+        game_state["seventyfive_moves"] = board.is_seventyfive_moves()
+        game_state["fivefold_repetition"] = board.is_fivefold_repetition()
+        game_state["can_claim_draw"] = board.can_claim_draw()
+        game_state["can_claim_fifty_moves"] = board.can_claim_fifty_moves()
+        game_state[
+            "can_claim_threefold_repetition"
+        ] = board.can_claim_threefold_repetition()
+        game_state["result"] = None
         if board.is_game_over():
-            if board.result()[-1] == '1':
-                game_state['result'] = 'Black won'
-            elif board.result()[0] == '1':
-                game_state['result'] = 'White won'
+            if board.result()[-1] == "1":
+                game_state["result"] = "Black won"
+            elif board.result()[0] == "1":
+                game_state["result"] = "White won"
             else:
-                game_state['result'] = 'Draw'
+                game_state["result"] = "Draw"
 
         return game_state
 
@@ -229,7 +234,7 @@ class GameKeeper():
 
         """
         for game in self._current_games:
-            if not game.state == 'in_progress':
+            if not game.state == "in_progress":
                 self.logger.debug(f"Checking game {game.id} | {game.state}")
                 self.logger.debug(f"  Game ended in {game.state}")
                 self._current_games.discard(game)
@@ -249,7 +254,7 @@ class GameKeeper():
     def load_games(self):
         """Load all games from database to the current games array."""
         self.logger.debug("Loading games...")
-        for game in Game.where('state', 'in_progress').get():
+        for game in Game.where("state", "in_progress").get():
             self._current_games.add(game)
 
     def add_player(self, player):

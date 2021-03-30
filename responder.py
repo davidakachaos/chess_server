@@ -8,6 +8,7 @@ from models.game import Game
 from models.player import Player
 from game_keeper import GameNotFound, IllegalMove, NotPlayersTurn
 
+
 class NotLoggedIn(Exception):
     """Raised when a used is not logged in for certain functions."""
 
@@ -16,18 +17,16 @@ class Responder(socketserver.BaseRequestHandler):
     """The responder to client requests."""
 
     def __init__(self, request, client_address, server):
-        self.logger = logging.getLogger('Responder')
+        self.logger = logging.getLogger("Responder")
         # self.logger.debug('__init__')
-        socketserver.BaseRequestHandler.__init__(self, request,
-                                                 client_address,
-                                                 server)
+        socketserver.BaseRequestHandler.__init__(self, request, client_address, server)
         self.game_keeper = server.game_keeper
         self.last_log_line = ""
 
     def _get_player(self, text):
         guid = text.split("|")[-1]
         # self.logger.debug(f"Checking player guid {guid}")
-        p = Player.where('guid', guid).first()
+        p = Player.where("guid", guid).first()
         if p is None:
             raise NotLoggedIn("Not logged in!")
         return p
@@ -42,13 +41,13 @@ class Responder(socketserver.BaseRequestHandler):
         """
         try:
             data = self.request.recv(4096)
-            text = data.decode('utf-8')
+            text = data.decode("utf-8")
         except ConnectionResetError as e:
             self.logger.error("Client disconnected before sending command!")
             return
 
         if len(text) < 1:
-            self.request.sendall('invalid'.encode("utf8"))
+            self.request.sendall("invalid".encode("utf8"))
             self.request.close()
             return
         try:
@@ -58,11 +57,11 @@ class Responder(socketserver.BaseRequestHandler):
             # self.logger.debug(f"exec: {method_name}")
             return method(text)
         except NotLoggedIn as e:
-            self.request.sendall('NOT LOGGED IN!'.encode("utf8"))
+            self.request.sendall("NOT LOGGED IN!".encode("utf8"))
         except AttributeError as e:
             self.logger.error(f"ERROR! Raw command: {text}")
             self.logger.debug("Unknown command!")
-            self.request.sendall('invalid'.encode("utf8"))
+            self.request.sendall("invalid".encode("utf8"))
             self.request.close()
             return
 
@@ -87,27 +86,27 @@ class Responder(socketserver.BaseRequestHandler):
 
     def _handle_move(self, text):
         # text == move|{gameguid}|{move}|{playerguid}
-        _, gguid, move, pguid = text.split('|')
+        _, gguid, move, pguid = text.split("|")
         player = self._get_player(text)
         try:
             self.server.game_keeper.make_move(gguid, player, move)
             # move has been made
-            self.request.sendall('move_made'.encode("utf8"))
+            self.request.sendall("move_made".encode("utf8"))
         except GameNotFound as e:
-            self.request.sendall('exception|game-not-found'.encode("utf8"))
+            self.request.sendall("exception|game-not-found".encode("utf8"))
             self.request.close()
         except IllegalMove as e:
-            self.request.sendall('exception|illegal_move'.encode("utf8"))
+            self.request.sendall("exception|illegal_move".encode("utf8"))
             self.request.close()
         except NotPlayersTurn as e:
-            self.request.sendall('exception|not-players-turn'.encode("utf8"))
+            self.request.sendall("exception|not-players-turn".encode("utf8"))
             self.request.close()
 
     def _handle_current_games(self, text):
         # self.logger.debug('Client wants a list of current_games')
         p = self._get_player(text)
         games = p.games_as_white.all() + p.games_as_black.all()
-        games = [g for g in games if g.state == 'in_progress']
+        games = [g for g in games if g.state == "in_progress"]
         guids = [g.guid for g in games]
         self.request.sendall("|".join(guids).encode("utf8"))
 
@@ -122,32 +121,32 @@ class Responder(socketserver.BaseRequestHandler):
         # self.logger.debug('Client wants a list of old games')
         p = self._get_player(text)
         games = p.games_as_white.all() + p.games_as_black.all()
-        games = [g for g in games if g.state != 'in_progress']
+        games = [g for g in games if g.state != "in_progress"]
         guids = [g.guid for g in games]
         self.request.sendall("|".join(guids).encode("utf8"))
 
     def _handle_myturn(self, text):
-        _, gguid, pguid = text.split('|')
+        _, gguid, pguid = text.split("|")
         player = self._get_player(text)
-        game = Game.where('guid', gguid).first()
+        game = Game.where("guid", gguid).first()
         if game.player_to_play.id == player.id:
             self.request.sendall("True".encode("utf8"))
         else:
             self.request.sendall("False".encode("utf8"))
 
     def _handle_myside(self, text):
-        _, gguid, pguid = text.split('|')
+        _, gguid, pguid = text.split("|")
         player = self._get_player(text)
-        game = Game.where('guid', gguid).first()
+        game = Game.where("guid", gguid).first()
         if game.white_player_id == player.id:
             self.request.sendall("White".encode("utf8"))
         else:
             self.request.sendall("Black".encode("utf8"))
 
     def _handle_opponent_name(self, text):
-        _, gguid, pguid = text.split('|')
+        _, gguid, pguid = text.split("|")
         player = self._get_player(text)
-        game = Game.where('guid', gguid).first()
+        game = Game.where("guid", gguid).first()
         if game.black_player.id == player.id:
             self.request.sendall(f"{game.white_player.name}".encode("utf8"))
         else:
@@ -158,54 +157,54 @@ class Responder(socketserver.BaseRequestHandler):
         p = self._get_player(text)
         game = self.server.game_keeper.new_game(p)
         if game is None:
-            self.request.sendall('queued_for_game'.encode("utf8"))
+            self.request.sendall("queued_for_game".encode("utf8"))
         else:
             self.request.sendall(f"{game.guid}".encode("utf8"))
 
     def _handle_login(self, text):
         self.logger.debug("Recieved login request.")
         # login|username|hashed_password
-        usr = text.split('|')[1]
-        pwd = text.split('|')[2]
+        usr = text.split("|")[1]
+        pwd = text.split("|")[2]
         self.logger.debug(f"Username: {usr} // pswd: {pwd} checking...")
         try:
-            player = Player.where('name', usr).where(
-                'hashed_password', pwd).first_or_fail()
+            player = (
+                Player.where("name", usr).where("hashed_password", pwd).first_or_fail()
+            )
             self.logger.debug("Found player!")
             self.request.sendall(player.guid.encode("utf8"))
         except:
             self.logger.debug("Found no player named that way...")
-            self.request.sendall('invalid'.encode("utf8"))
+            self.request.sendall("invalid".encode("utf8"))
 
     def _handle_register(self, text):
         import hashlib
+
         self.logger.debug("Recieved register request.")
         # register|username|password|password_confirm
-        usr = text.split('|')[1]
-        pwd1 = text.split('|')[2]
-        pwd2 = text.split('|')[3]
+        usr = text.split("|")[1]
+        pwd1 = text.split("|")[2]
+        pwd2 = text.split("|")[3]
         if Player.where("name", usr).count() > 0:
-            self.request.sendall('username_taken'.encode("utf8"))
+            self.request.sendall("username_taken".encode("utf8"))
             self.request.close()
             return
 
         if pwd1 != pwd2:
-            self.request.sendall('invalid_password'.encode("utf8"))
+            self.request.sendall("invalid_password".encode("utf8"))
             self.request.close()
             return
 
         player = Player()
         player.name = usr
-        player.hashed_password = hashlib.sha224(
-            pwd1.encode("utf8")).hexdigest()
+        player.hashed_password = hashlib.sha224(pwd1.encode("utf8")).hexdigest()
         player.save()  # Needed to get an ID in the DB
         player.guid = hashlib.sha224(
-            (str(player.id) + player.name +
-             player.hashed_password).encode("utf8")).hexdigest()
+            (str(player.id) + player.name + player.hashed_password).encode("utf8")
+        ).hexdigest()
         if player.save():
-            self.request.sendall(
-                f"register_success|{player.guid}".encode("utf8"))
+            self.request.sendall(f"register_success|{player.guid}".encode("utf8"))
             self.request.close()
         else:
-            self.request.sendall('register_failed!'.encode("utf8"))
+            self.request.sendall("register_failed!".encode("utf8"))
             self.request.close()
